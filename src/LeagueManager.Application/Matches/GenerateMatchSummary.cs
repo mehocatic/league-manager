@@ -45,10 +45,18 @@ internal sealed class GenerateMatchSummaryCommandHandler(
             return Error.Conflict($"Match {command.MatchId} has no result yet, so there is nothing to summarise.");
         }
 
-        var goals = match.Goals
-            .Select(g => new GoalFact(
-                g.Minute, $"{g.FirstName} {g.LastName}", g.LastName, g.TeamId == match.HomeTeamId ? match.HomeTeam : match.AwayTeam))
-            .ToList();
+        // The running score is computed here, because the model got the order of goals wrong when it had to infer it
+        // (it called a 70th minute goal "final" although another goal followed in the 88th).
+        var (home, away) = (0, 0);
+        var goals = new List<GoalFact>(match.Goals.Count);
+        foreach (var g in match.Goals)
+        {
+            var isHomeGoal = g.TeamId == match.HomeTeamId;
+            if (isHomeGoal) home++; else away++;
+
+            goals.Add(new GoalFact(
+                g.Minute, $"{g.FirstName} {g.LastName}", g.LastName, isHomeGoal ? match.HomeTeam : match.AwayTeam, $"{home}:{away}"));
+        }
         var facts = new MatchFacts(match.Round, match.HomeTeam, match.AwayTeam, homeGoals, awayGoals, goals);
         var request = MatchSummaryPrompt.Create(command.MatchId, facts);
 

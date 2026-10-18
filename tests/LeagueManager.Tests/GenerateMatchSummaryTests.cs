@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LeagueManager.Application.Abstractions;
 using LeagueManager.Application.Common;
 using LeagueManager.Application.Matches;
@@ -43,6 +44,28 @@ public class GenerateMatchSummaryTests
         Assert.Equal(ValidSummary(match), result.Summary);
         Assert.Single(llm.Requests);
         Assert.Contains(match.HomeTeam, llm.Requests[0].Prompt);
+    }
+
+    [Fact]
+    public async Task Prompt_contains_the_running_score_after_each_goal()
+    {
+        MatchDetailsDto? match = null;
+        var llm = new FakeLlmClient(_ => ValidSummary(match!));
+        (var app, match) = await SetUpAsync(llm);
+        await using var _ = app;
+
+        await app.CommandAsync<GenerateMatchSummaryCommand, Result<MatchDetailsDto>>(new GenerateMatchSummaryCommand(match.Id));
+
+        var (home, away) = (0, 0);
+        var expected = match.Goals.Select(g => g.TeamId == match.HomeTeamId ? $"{++home}:{away}" : $"{home}:{++away}").ToList();
+
+        var json = llm.Requests[0].Prompt[(llm.Requests[0].Prompt.IndexOf('\n') + 1)..];
+        var sent = JsonDocument.Parse(json).RootElement.GetProperty("goals").EnumerateArray()
+            .Select(g => g.GetProperty("scoreAfter").GetString()!)
+            .ToList();
+
+        Assert.Equal(expected, sent);
+        Assert.Equal($"{match.HomeGoals}:{match.AwayGoals}", sent[^1]);
     }
 
     [Fact]
