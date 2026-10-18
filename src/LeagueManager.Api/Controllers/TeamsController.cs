@@ -10,6 +10,7 @@ namespace LeagueManager.Api.Controllers;
 public sealed class TeamsController(
     IQueryHandler<GetTeamsQuery, IReadOnlyList<TeamDto>> getTeams,
     IQueryHandler<GetTeamByIdQuery, Result<TeamDto>> getTeamById,
+    IQueryHandler<GetTeamPlayersQuery, Result<IReadOnlyList<PlayerDto>>> getTeamPlayers,
     ICommandHandler<CreateTeamCommand, Result<TeamDto>> createTeam) : ApiController
 {
     [HttpGet]
@@ -23,6 +24,15 @@ public sealed class TeamsController(
     public async Task<IActionResult> GetById(int id, CancellationToken cancellationToken)
     {
         var result = await getTeamById.HandleAsync(new GetTeamByIdQuery(id), cancellationToken);
+        return result.Match<IActionResult>(Ok, ErrorResult);
+    }
+
+    [HttpGet("{id:int}/players")]
+    [ProducesResponseType<IReadOnlyList<PlayerDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPlayers(int id, CancellationToken cancellationToken)
+    {
+        var result = await getTeamPlayers.HandleAsync(new GetTeamPlayersQuery(id), cancellationToken);
         return result.Match<IActionResult>(Ok, ErrorResult);
     }
 

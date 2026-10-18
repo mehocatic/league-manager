@@ -19,6 +19,6 @@ public class GoalConfiguration : IEntityTypeConfiguration<Goal>
                .OnDelete(DeleteBehavior.Restrict);
                
         builder.ToTable(t =>
-            t.HasCheckConstraint("CK_Goal_Minute", "\"Minute\" BETWEEN 1 AND 130"));
+            t.HasCheckConstraint("CK_Goal_Minute", $"\"Minute\" BETWEEN {Goal.MinMinute} AND {Goal.MaxMinute}"));
     }
 }
