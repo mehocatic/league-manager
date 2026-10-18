@@ -5,4 +5,7 @@
     <Project Path="src/LeagueManager.Domain/LeagueManager.Domain.csproj" />
     <Project Path="src/LeagueManager.Infrastructure/LeagueManager.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LeagueManager.Tests/LeagueManager.Tests.csproj" />
+  </Folder>
 </Solution>

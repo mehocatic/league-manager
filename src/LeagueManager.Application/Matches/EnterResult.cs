@@ -1,7 +1,9 @@
 using LeagueManager.Application.Abstractions;
 using LeagueManager.Application.Common;
+using LeagueManager.Application.Standings;
 using LeagueManager.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace LeagueManager.Application.Matches;
 
@@ -11,7 +13,7 @@ public sealed record GoalInput(int PlayerId, int Minute);
 public sealed record EnterResultCommand(int MatchId, int HomeGoals, int AwayGoals, IReadOnlyList<GoalInput> Goals)
     : ICommand<Result<MatchDetailsDto>>;
 
-internal sealed class EnterResultCommandHandler(ILeagueDbContext db) : ICommandHandler<EnterResultCommand, Result<MatchDetailsDto>>
+internal sealed class EnterResultCommandHandler(ILeagueDbContext db, IMemoryCache cache) : ICommandHandler<EnterResultCommand, Result<MatchDetailsDto>>
 {
     public async Task<Result<MatchDetailsDto>> HandleAsync(EnterResultCommand command, CancellationToken cancellationToken)
     {
@@ -81,6 +83,9 @@ internal sealed class EnterResultCommandHandler(ILeagueDbContext db) : ICommandH
         match.Summary = null;
 
         await db.SaveChangesAsync(cancellationToken);
+
+        // Invalidated only after a successful save: if saving throws, the cached table is still correct.
+        cache.InvalidateStandings();
 
         return await db.Matches
             .Where(m => m.Id == match.Id)

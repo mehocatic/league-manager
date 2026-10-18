@@ -9,6 +9,9 @@ public static class DependencyInjection
 
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        // In-process cache is enough for a single API instance; a second instance would need a distributed cache.
+        services.AddMemoryCache();
+
         // Every handler is registered against its handler interface by scanning this assembly, so a new use case
         // needs no DI wiring. This is the one job MediatR would otherwise do for us.
         var registrations =

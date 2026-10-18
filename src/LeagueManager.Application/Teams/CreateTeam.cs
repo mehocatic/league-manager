@@ -1,13 +1,15 @@
 using LeagueManager.Application.Abstractions;
 using LeagueManager.Application.Common;
+using LeagueManager.Application.Standings;
 using LeagueManager.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace LeagueManager.Application.Teams;
 
 public sealed record CreateTeamCommand(string Name, string City) : ICommand<Result<TeamDto>>;
 
-internal sealed class CreateTeamCommandHandler(ILeagueDbContext db) : ICommandHandler<CreateTeamCommand, Result<TeamDto>>
+internal sealed class CreateTeamCommandHandler(ILeagueDbContext db, IMemoryCache cache) : ICommandHandler<CreateTeamCommand, Result<TeamDto>>
 {
     public async Task<Result<TeamDto>> HandleAsync(CreateTeamCommand command, CancellationToken cancellationToken)
     {
@@ -34,6 +36,9 @@ internal sealed class CreateTeamCommandHandler(ILeagueDbContext db) : ICommandHa
         var team = new Team { Name = name, City = city };
         db.Teams.Add(team);
         await db.SaveChangesAsync(cancellationToken);
+
+        // A new team must appear in the table (with zero points), so the cached table is now outdated.
+        cache.InvalidateStandings();
 
         return new TeamDto(team.Id, team.Name, team.City);
     }
