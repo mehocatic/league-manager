@@ -1,6 +1,8 @@
 using LeagueManager.Api.Authentication;
+using LeagueManager.Api.BackgroundJobs;
 using LeagueManager.Api.OpenApi;
 using LeagueManager.Application;
+using LeagueManager.Application.Reports;
 using LeagueManager.Infrastructure;
 using LeagueManager.Infrastructure.Ai;
 using LeagueManager.Infrastructure.Persistence;
@@ -15,6 +17,8 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString, builder.Environment.ContentRootPath);
 builder.Services.AddLeagueAuthentication(builder.Configuration, builder.Environment);
 builder.Services.Configure<GeminiOptions>(builder.Configuration.GetSection(GeminiOptions.SectionName));
+builder.Services.Configure<ReportOptions>(builder.Configuration.GetSection(ReportOptions.SectionName));
+builder.Services.AddHostedService<WeeklyReportJob>();
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>

@@ -12,6 +12,7 @@ public class AiUsageRecordConfiguration : IEntityTypeConfiguration<AiUsageRecord
         builder.Property(r => r.Model).IsRequired().HasMaxLength(100);
         builder.Property(r => r.Error).HasMaxLength(500);
 
+        builder.Property(r => r.CreatedAtUtc).HasConversion(UtcConverter.Instance);
         builder.HasIndex(r => r.CreatedAtUtc);
     }
 }

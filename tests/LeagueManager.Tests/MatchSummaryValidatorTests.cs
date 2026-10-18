@@ -74,6 +74,7 @@ public class MatchSummaryValidatorTests
     [InlineData("NK NOVI TRAVNIK", "gosti iz NK Novog Travnika")]
     [InlineData("NK ISKRA 1946", "golovi NK Iskre 1946")]
     [InlineData("NK ROMARI", "protiv NK Romarima")]
+    [InlineData("NK ROMARI", "pobjeda NK Romarija")]
     [InlineData("GNK BRATSTVO", "remi GNK Bratstva")]
     [InlineData("Jusić", "pogodak Jusića")]
     [InlineData("Ibrahimović", "Ibrahimovićem")]
@@ -87,6 +88,7 @@ public class MatchSummaryValidatorTests
     [InlineData("Jurić", "pogodak Jurišića")]
     [InlineData("NK SLOGA", "NK Slobode")]
     [InlineData("NK ISKRA 1946", "za NK Iskrue 1946")]
+    [InlineData("NK BAJER 99", "savladao NK Bajr 99")]
     [InlineData("Jusić", "Jusićevi")]
     public void Rejects_missing_prefix_number_or_a_different_name(string name, string text) =>
         Assert.False(MatchSummaryValidator.Mentions(text, name));

@@ -27,6 +27,8 @@ internal static class MatchSummaryPrompt
         - Mention every goal with its scorer's full name and its minute, strictly in the order the goals were scored
           (the order of the goals list). Do not group goals by team. Combine several goals of one player in one phrase
           only if no other goal was scored in between.
+        - Always write each goal's minute as digits, for example "u 4. minuti". Never write a minute in words
+          ("u četvrtoj minuti") or relative to another goal ("dvije minute kasnije").
         - Each goal has "scoreAfter", the score (home:away) right after that goal. Describe the course of the match only
           from these values. Call a goal the opening, equalising, leading, winning or final goal only if scoreAfter shows it.
         - Write 2 to 4 sentences, at most 600 characters, as plain text without markdown or links.

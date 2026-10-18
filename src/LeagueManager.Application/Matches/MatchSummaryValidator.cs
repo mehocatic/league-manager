@@ -13,7 +13,9 @@ internal static partial class MatchSummaryValidator
     // A closed list instead of "any short suffix", so a typo like "Iskrue" is not accepted as "Iskra".
     private static readonly HashSet<string> CaseEndings = new(StringComparer.OrdinalIgnoreCase)
     {
-        "", "a", "e", "i", "o", "u", "om", "em", "im", "ih", "og", "oga", "ome", "omu", "ima", "ama"
+        "", "a", "e", "i", "o", "u", "om", "em", "im", "ih", "og", "oga", "ome", "omu", "ima", "ama",
+        // Names ending in -i: "NK Romari" -> "NK Romarija", "NK Romariju", "NK Romarijem".
+        "ija", "iju", "ijem"
     };
 
     public static string? FindProblem(string summary, MatchFacts facts)

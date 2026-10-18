@@ -14,6 +14,7 @@ public interface ILeagueDbContext
     DbSet<Goal> Goals { get; }
     DbSet<User> Users { get; }
     DbSet<AiUsageRecord> AiUsageRecords { get; }
+    DbSet<RoundReport> RoundReports { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

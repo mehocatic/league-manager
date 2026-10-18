@@ -1,5 +1,6 @@
 using LeagueManager.Application.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LeagueManager.Application;
 
@@ -11,6 +12,7 @@ public static class DependencyInjection
     {
         // In-process cache is enough for a single API instance; a second instance would need a distributed cache.
         services.AddMemoryCache();
+        services.TryAddSingleton(TimeProvider.System);
 
         // Every handler is registered against its handler interface by scanning this assembly, so a new use case
         // needs no DI wiring. This is the one job MediatR would otherwise do for us.

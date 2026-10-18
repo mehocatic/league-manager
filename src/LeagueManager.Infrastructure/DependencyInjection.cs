@@ -1,7 +1,9 @@
 using LeagueManager.Application.Abstractions;
+using LeagueManager.Application.Reports;
 using LeagueManager.Infrastructure.Ai;
 using LeagueManager.Infrastructure.Authentication;
 using LeagueManager.Infrastructure.Persistence;
+using LeagueManager.Infrastructure.Reports;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,6 +32,7 @@ public static class DependencyInjection
 
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddSingleton<IAccessTokenIssuer, JwtTokenIssuer>();
+        services.AddSingleton<IRoundReportRenderer, QuestPdfRoundReportRenderer>();
 
         services.AddHttpClient<ILlmClient, GeminiClient>((provider, http) =>
         {

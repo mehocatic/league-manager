@@ -8,18 +8,6 @@ namespace LeagueManager.Tests;
 
 public class GenerateMatchSummaryTests
 {
-    // Replays scripted answers; a function per answer lets it build text from the real seeded facts in the prompt.
-    private sealed class FakeLlmClient(params Func<LlmRequest, Result<string>>[] answers) : ILlmClient
-    {
-        public List<LlmRequest> Requests { get; } = [];
-
-        public Task<Result<string>> GenerateTextAsync(LlmRequest request, CancellationToken cancellationToken)
-        {
-            Requests.Add(request);
-            return Task.FromResult(answers[Requests.Count - 1](request));
-        }
-    }
-
     private static async Task<(TestApp App, MatchDetailsDto Match)> SetUpAsync(FakeLlmClient llm)
     {
         var app = await TestApp.CreateAsync(services => services.AddSingleton<ILlmClient>(llm));

@@ -15,7 +15,7 @@ partial class LeagueDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261018164834_AddAiUsageRecords";
+    public override string LastMigrationId => "20261018170749_AddRoundReports";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -172,6 +172,30 @@ partial class LeagueDbContextModelSnapshot : ModelSnapshot
                     .IsUnique();
 
                 b.ToTable("Players");
+            });
+
+        modelBuilder.Entity("LeagueManager.Domain.Entities.RoundReport", b =>
+            {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER");
+
+                b.Property<byte[]>("Content")
+                    .IsRequired()
+                    .HasColumnType("BLOB");
+
+                b.Property<DateTime>("CreatedAtUtc")
+                    .HasColumnType("TEXT");
+
+                b.Property<int>("Round")
+                    .HasColumnType("INTEGER");
+
+                b.HasKey("Id");
+
+                b.HasIndex("Round")
+                    .IsUnique();
+
+                b.ToTable("RoundReports");
             });
 
         modelBuilder.Entity("LeagueManager.Domain.Entities.Team", b =>

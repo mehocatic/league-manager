@@ -14,6 +14,7 @@ public class LeagueDbContext : DbContext, ILeagueDbContext
     public DbSet<Goal> Goals => Set<Goal>();
     public DbSet<User> Users => Set<User>();
     public DbSet<AiUsageRecord> AiUsageRecords => Set<AiUsageRecord>();
+    public DbSet<RoundReport> RoundReports => Set<RoundReport>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

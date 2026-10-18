@@ -78,9 +78,14 @@ internal sealed class GenerateMatchSummaryCommandHandler(
                 return await db.Matches.Where(m => m.Id == command.MatchId).SelectDetails().SingleAsync(cancellationToken);
             }
 
-            logger.LogWarning("Rejected AI summary for match {MatchId} (attempt {Attempt}): {Problem}", command.MatchId, attempt, problem);
+            // The rejected text is logged because it is what shows how to improve the prompt.
+            logger.LogWarning(
+                "Rejected AI summary for match {MatchId} (attempt {Attempt}): {Problem}. Text: {Summary}", command.MatchId, attempt, problem, summary);
         }
 
-        return Error.ExternalService("The AI summary did not pass validation. Please try again.");
+        return RejectedError;
     }
+
+    // A known instance, so callers can tell "this match's text was rejected" from "the AI service is unavailable".
+    public static readonly Error RejectedError = Error.ExternalService("The AI summary did not pass validation. Please try again.");
 }
