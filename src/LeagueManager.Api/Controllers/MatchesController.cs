@@ -2,6 +2,8 @@ using LeagueManager.Api.Contracts;
 using LeagueManager.Application.Abstractions;
 using LeagueManager.Application.Common;
 using LeagueManager.Application.Matches;
+using LeagueManager.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.Api.Controllers;
@@ -31,8 +33,8 @@ public sealed class MatchesController(
     }
 
     // PUT, not POST: the result is a sub-resource of the match that is fully replaced, so repeating the request is safe.
-    // TODO(JWT milestone): restrict to the admin role.
     [HttpPut("{id:int}/result")]
+    [Authorize(Roles = Roles.Admin)]
     [ProducesResponseType<MatchDetailsDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

@@ -1,3 +1,5 @@
+using LeagueManager.Api.Authentication;
+using LeagueManager.Api.OpenApi;
 using LeagueManager.Application;
 using LeagueManager.Infrastructure;
 using LeagueManager.Infrastructure.Persistence;
@@ -10,9 +12,14 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 // Add services to the container.
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString, builder.Environment.ContentRootPath);
+builder.Services.AddLeagueAuthentication(builder.Configuration, builder.Environment);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<BearerSecurityTransformer>();
+    options.AddOperationTransformer<BearerSecurityTransformer>();
+});
 
 var app = builder.Build();
 
@@ -29,6 +36,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseRateLimiter();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

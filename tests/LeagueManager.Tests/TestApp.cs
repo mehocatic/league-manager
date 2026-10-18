@@ -2,6 +2,7 @@ using LeagueManager.Application;
 using LeagueManager.Application.Abstractions;
 using LeagueManager.Application.Common;
 using LeagueManager.Infrastructure;
+using LeagueManager.Infrastructure.Authentication;
 using LeagueManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,11 +22,16 @@ internal sealed class TestApp : IAsyncDisposable
         _services = services;
     }
 
+    public const string AdminUsername = "test-admin";
+    public const string AdminPassword = "test-password";
+
     public static async Task<TestApp> CreateAsync()
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"league-tests-{Guid.NewGuid():N}.db");
         var services = new ServiceCollection()
             .AddLogging()
+            .Configure<AdminOptions>(o => (o.Username, o.Password) = (AdminUsername, AdminPassword))
+            .Configure<JwtOptions>(o => o.SigningKey = new string('k', JwtOptions.MinSigningKeyBytes))
             .AddApplication()
             .AddInfrastructure($"Data Source={databasePath}", Path.GetTempPath())
             .BuildServiceProvider();

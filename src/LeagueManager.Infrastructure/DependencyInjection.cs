@@ -1,4 +1,5 @@
 using LeagueManager.Application.Abstractions;
+using LeagueManager.Infrastructure.Authentication;
 using LeagueManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,9 @@ public static class DependencyInjection
 
         // Resolves to the same scoped instance, so a handler and anything else in the request share one unit of work.
         services.AddScoped<ILeagueDbContext>(provider => provider.GetRequiredService<LeagueDbContext>());
+
+        services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
+        services.AddSingleton<IAccessTokenIssuer, JwtTokenIssuer>();
         return services;
     }
 }

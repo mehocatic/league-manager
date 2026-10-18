@@ -12,6 +12,7 @@ public class LeagueDbContext : DbContext, ILeagueDbContext
     public DbSet<Player> Players => Set<Player>();
     public DbSet<Match> Matches => Set<Match>();
     public DbSet<Goal> Goals => Set<Goal>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

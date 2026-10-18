@@ -1,6 +1,8 @@
 using LeagueManager.Application.Abstractions;
 using LeagueManager.Application.Common;
 using LeagueManager.Application.Teams;
+using LeagueManager.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LeagueManager.Api.Controllers;
@@ -36,8 +38,8 @@ public sealed class TeamsController(
         return result.Match<IActionResult>(Ok, ErrorResult);
     }
 
-    // TODO(JWT milestone): restrict to the admin role.
     [HttpPost]
+    [Authorize(Roles = Roles.Admin)]
     [ProducesResponseType<TeamDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
