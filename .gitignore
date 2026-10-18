@@ -485,3 +485,8 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Local SQLite database: each machine recreates it from migrations, so it never belongs in Git
+*.db
+*.db-shm
+*.db-wal
