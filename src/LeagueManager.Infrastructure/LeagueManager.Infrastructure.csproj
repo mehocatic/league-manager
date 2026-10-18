@@ -8,6 +8,11 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0-rc.2.26504.105" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Linked, not copied into the project: data/ stays the single source of truth for the seed CSVs. -->
+    <None Include="..\..\data\*.csv" Link="SeedData\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
