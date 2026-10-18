@@ -15,12 +15,63 @@ partial class LeagueDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261018163043_AddUsers";
+    public override string LastMigrationId => "20261018164834_AddAiUsageRecords";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
 #pragma warning disable 612, 618
         modelBuilder.HasAnnotation("ProductVersion", "11.0.0-rc.2.26504.105");
+
+        modelBuilder.Entity("LeagueManager.Domain.Entities.AiUsageRecord", b =>
+            {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER");
+
+                b.Property<DateTime>("CreatedAtUtc")
+                    .HasColumnType("TEXT");
+
+                b.Property<int>("DurationMs")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("Error")
+                    .HasMaxLength(500)
+                    .HasColumnType("TEXT");
+
+                b.Property<double>("EstimatedCostUsd")
+                    .HasColumnType("REAL");
+
+                b.Property<string>("Feature")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT");
+
+                b.Property<int?>("MatchId")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("Model")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("TEXT");
+
+                b.Property<int>("OutputTokens")
+                    .HasColumnType("INTEGER");
+
+                b.Property<int>("PromptTokens")
+                    .HasColumnType("INTEGER");
+
+                b.Property<int?>("StatusCode")
+                    .HasColumnType("INTEGER");
+
+                b.Property<bool>("Success")
+                    .HasColumnType("INTEGER");
+
+                b.HasKey("Id");
+
+                b.HasIndex("CreatedAtUtc");
+
+                b.ToTable("AiUsageRecords");
+            });
 
         modelBuilder.Entity("LeagueManager.Domain.Entities.Goal", b =>
             {

@@ -6,7 +6,8 @@ public enum ErrorType
     Validation,
     NotFound,
     Conflict,
-    Unauthorized
+    Unauthorized,
+    ExternalService
 }
 
 public sealed record Error(ErrorType Type, string Message)
@@ -15,4 +16,5 @@ public sealed record Error(ErrorType Type, string Message)
     public static Error NotFound(string message) => new(ErrorType.NotFound, message);
     public static Error Conflict(string message) => new(ErrorType.Conflict, message);
     public static Error Unauthorized(string message) => new(ErrorType.Unauthorized, message);
+    public static Error ExternalService(string message) => new(ErrorType.ExternalService, message);
 }

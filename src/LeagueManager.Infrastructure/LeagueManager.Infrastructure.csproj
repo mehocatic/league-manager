@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0-rc.2.26504.105" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="11.0.0-rc.2.26504.105" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="11.0.0-rc.2.26504.105" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.19.2" />
   </ItemGroup>

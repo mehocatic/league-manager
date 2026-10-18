@@ -13,6 +13,7 @@ public interface ILeagueDbContext
     DbSet<Match> Matches { get; }
     DbSet<Goal> Goals { get; }
     DbSet<User> Users { get; }
+    DbSet<AiUsageRecord> AiUsageRecords { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace LeagueManager.Application.Common;
 
 // Expected failures (invalid input, missing team, duplicate name) are returned as values instead of thrown,
@@ -18,4 +20,11 @@ public sealed class Result<T>
 
     public TOut Match<TOut>(Func<T, TOut> onSuccess, Func<Error, TOut> onFailure) =>
         _error is null ? onSuccess(_value!) : onFailure(_error);
+
+    public bool TryGetValue([MaybeNullWhen(false)] out T value, [MaybeNullWhen(true)] out Error error)
+    {
+        value = _value;
+        error = _error;
+        return _error is null;
+    }
 }

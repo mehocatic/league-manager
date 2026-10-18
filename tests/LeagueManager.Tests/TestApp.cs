@@ -25,19 +25,23 @@ internal sealed class TestApp : IAsyncDisposable
     public const string AdminUsername = "test-admin";
     public const string AdminPassword = "test-password";
 
-    public static async Task<TestApp> CreateAsync()
+    public static async Task<TestApp> CreateAsync(Action<IServiceCollection>? overrideServices = null)
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"league-tests-{Guid.NewGuid():N}.db");
-        var services = new ServiceCollection()
+        var services = new ServiceCollection();
+        services
             .AddLogging()
             .Configure<AdminOptions>(o => (o.Username, o.Password) = (AdminUsername, AdminPassword))
             .Configure<JwtOptions>(o => o.SigningKey = new string('k', JwtOptions.MinSigningKeyBytes))
             .AddApplication()
-            .AddInfrastructure($"Data Source={databasePath}", Path.GetTempPath())
-            .BuildServiceProvider();
+            .AddInfrastructure($"Data Source={databasePath}", Path.GetTempPath());
 
-        await services.InitializeDatabaseAsync();
-        return new TestApp(databasePath, services);
+        // Registered last, so a test's fake (for example ILlmClient) wins over the real implementation.
+        overrideServices?.Invoke(services);
+
+        var provider = services.BuildServiceProvider();
+        await provider.InitializeDatabaseAsync();
+        return new TestApp(databasePath, provider);
     }
 
     // One DI scope per call mirrors one HTTP request in the API.

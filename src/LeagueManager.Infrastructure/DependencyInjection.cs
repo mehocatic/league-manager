@@ -1,9 +1,11 @@
 using LeagueManager.Application.Abstractions;
+using LeagueManager.Infrastructure.Ai;
 using LeagueManager.Infrastructure.Authentication;
 using LeagueManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace LeagueManager.Infrastructure;
 
@@ -28,6 +30,14 @@ public static class DependencyInjection
 
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddSingleton<IAccessTokenIssuer, JwtTokenIssuer>();
+
+        services.AddHttpClient<ILlmClient, GeminiClient>((provider, http) =>
+        {
+            var gemini = provider.GetRequiredService<IOptions<GeminiOptions>>().Value;
+            http.BaseAddress = new Uri(gemini.BaseUrl);
+            http.Timeout = TimeSpan.FromSeconds(gemini.TimeoutSeconds);
+        });
+
         return services;
     }
 }

@@ -13,6 +13,7 @@ public class LeagueDbContext : DbContext, ILeagueDbContext
     public DbSet<Match> Matches => Set<Match>();
     public DbSet<Goal> Goals => Set<Goal>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<AiUsageRecord> AiUsageRecords => Set<AiUsageRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

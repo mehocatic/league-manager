@@ -12,7 +12,8 @@ namespace LeagueManager.Api.Controllers;
 public sealed class MatchesController(
     IQueryHandler<GetMatchesQuery, Result<IReadOnlyList<MatchDto>>> getMatches,
     IQueryHandler<GetMatchByIdQuery, Result<MatchDetailsDto>> getMatchById,
-    ICommandHandler<EnterResultCommand, Result<MatchDetailsDto>> enterResult) : ApiController
+    ICommandHandler<EnterResultCommand, Result<MatchDetailsDto>> enterResult,
+    ICommandHandler<GenerateMatchSummaryCommand, Result<MatchDetailsDto>> generateSummary) : ApiController
 {
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<MatchDto>>(StatusCodes.Status200OK)]
@@ -42,6 +43,18 @@ public sealed class MatchesController(
     {
         var command = new EnterResultCommand(id, request.HomeGoals!.Value, request.AwayGoals!.Value, request.Goals ?? []);
         var result = await enterResult.HandleAsync(command, cancellationToken);
+        return result.Match<IActionResult>(Ok, ErrorResult);
+    }
+
+    [HttpPost("{id:int}/summary")]
+    [Authorize(Roles = Roles.Admin)]
+    [ProducesResponseType<MatchDetailsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> GenerateSummary(int id, CancellationToken cancellationToken)
+    {
+        var result = await generateSummary.HandleAsync(new GenerateMatchSummaryCommand(id), cancellationToken);
         return result.Match<IActionResult>(Ok, ErrorResult);
     }
 }
