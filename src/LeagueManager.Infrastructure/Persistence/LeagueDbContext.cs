@@ -1,9 +1,10 @@
+using LeagueManager.Application.Abstractions;
 using LeagueManager.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace LeagueManager.Infrastructure.Persistence;
 
-public class LeagueDbContext : DbContext
+public class LeagueDbContext : DbContext, ILeagueDbContext
 {
     public LeagueDbContext(DbContextOptions<LeagueDbContext> options) : base(options) { }
 

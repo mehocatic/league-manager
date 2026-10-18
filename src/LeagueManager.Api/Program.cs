@@ -1,3 +1,4 @@
+using LeagueManager.Application;
 using LeagueManager.Infrastructure;
 using LeagueManager.Infrastructure.Persistence;
 
@@ -7,6 +8,7 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("Connection string 'Default' is missing.");
 
 // Add services to the container.
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString, builder.Environment.ContentRootPath);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -20,6 +22,9 @@ await app.Services.InitializeDatabaseAsync();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    // Only the Swagger UI page is used; it renders the built-in /openapi/v1.json, so Swashbuckle's own generator is not needed.
+    app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "League Manager API v1"));
 }
 
 app.UseHttpsRedirection();

@@ -1,3 +1,4 @@
+using LeagueManager.Application.Abstractions;
 using LeagueManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,9 @@ public static class DependencyInjection
         }
 
         services.AddDbContext<LeagueDbContext>(options => options.UseSqlite(sqlite.ToString()));
+
+        // Resolves to the same scoped instance, so a handler and anything else in the request share one unit of work.
+        services.AddScoped<ILeagueDbContext>(provider => provider.GetRequiredService<LeagueDbContext>());
         return services;
     }
 }

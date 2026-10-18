@@ -1,11 +1,21 @@
 @LeagueManager.Api_HostAddress = http://localhost:5250
 
-GET {{LeagueManager.Api_HostAddress}}/openapi/v1.json
+GET {{LeagueManager.Api_HostAddress}}/api/teams
 Accept: application/json
 
 ###
 
-GET {{LeagueManager.Api_HostAddress}}/weatherforecast/
+GET {{LeagueManager.Api_HostAddress}}/api/teams/1
 Accept: application/json
+
+###
+
+POST {{LeagueManager.Api_HostAddress}}/api/teams
+Content-Type: application/json
+
+{
+  "name": "NK TEST",
+  "city": "Sarajevo"
+}
 
 ###
