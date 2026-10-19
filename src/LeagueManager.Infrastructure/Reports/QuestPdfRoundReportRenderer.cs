@@ -12,6 +12,9 @@ internal sealed class QuestPdfRoundReportRenderer : IRoundReportRenderer
 {
     private const string DateTimeFormat = "dd.MM.yyyy. HH:mm";
 
+    // Own list instead of the bs-BA culture, because servers and containers often run without full culture data.
+    private static readonly string[] DayNames = ["nedjelja", "ponedjeljak", "utorak", "srijeda", "četvrtak", "petak", "subota"];
+
     static QuestPdfRoundReportRenderer()
     {
         // Free for individuals and organisations under 1M USD annual revenue, which keeps the stack at $0.
@@ -48,14 +51,14 @@ internal sealed class QuestPdfRoundReportRenderer : IRoundReportRenderer
                 content.Item().ShowEntire().Column(section =>
                 {
                     section.Spacing(6);
-                    section.Item().Text("Tabela").FontSize(12).Bold();
+                    section.Item().Text($"Tabela nakon {report.Round}. kola").FontSize(12).Bold();
                     section.Item().Element(container => ComposeStandings(container, report));
                 });
 
                 content.Item().ShowEntire().Column(section =>
                 {
                     section.Spacing(6);
-                    section.Item().Text("Najbolji strijelci").FontSize(12).Bold();
+                    section.Item().Text($"Najbolji strijelci nakon {report.Round}. kola").FontSize(12).Bold();
                     section.Item().Element(container => ComposeTopScorers(container, report));
                 });
             });
@@ -87,9 +90,11 @@ internal sealed class QuestPdfRoundReportRenderer : IRoundReportRenderer
                 row.RelativeItem().Text(match.AwayTeam).Bold();
             });
 
+            var kickOff = $"{DayNames[(int)match.KickOff.DayOfWeek]}, {Format(match.KickOff)}";
+            column.Item().AlignCenter().Text(match.IsPlayed ? kickOff : $"{kickOff}, nije odigrano").FontSize(8).FontColor(Colors.Grey.Darken1);
+
             if (!match.IsPlayed)
             {
-                column.Item().AlignCenter().Text($"{Format(match.KickOff)}, nije odigrano").FontSize(8).FontColor(Colors.Grey.Darken1);
                 return;
             }
 

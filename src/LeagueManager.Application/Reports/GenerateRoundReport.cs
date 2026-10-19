@@ -51,8 +51,8 @@ internal sealed class GenerateRoundReportCommandHandler(
             .OrderBy(m => m.KickOff).ThenBy(m => m.Id)
             .SelectDetails()
             .ToListAsync(cancellationToken);
-        var standings = await getStandings.HandleAsync(new GetStandingsQuery(), cancellationToken);
-        var topScorers = (await getTopScorers.HandleAsync(new GetTopScorersQuery(TopScorersInReport), cancellationToken))
+        var standings = await getStandings.HandleAsync(new GetStandingsQuery(round), cancellationToken);
+        var topScorers = (await getTopScorers.HandleAsync(new GetTopScorersQuery(TopScorersInReport, round), cancellationToken))
             .Match(scorers => scorers, _ => []);
 
         var report = options.Value;

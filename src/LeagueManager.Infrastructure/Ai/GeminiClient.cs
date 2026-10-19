@@ -1,6 +1,9 @@
 using System.Diagnostics;
+using System.Globalization;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using LeagueManager.Application.Abstractions;
 using LeagueManager.Application.Common;
 using LeagueManager.Domain.Entities;
@@ -13,6 +16,12 @@ namespace LeagueManager.Infrastructure.Ai;
 internal sealed class GeminiClient(
     HttpClient http, IOptions<GeminiOptions> options, LeagueDbContext db, ILogger<GeminiClient> logger) : ILlmClient
 {
+    // Optional settings that are not configured are left out of the request instead of being sent as null.
+    private static readonly JsonSerializerOptions RequestJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
     public async Task<Result<string>> GenerateTextAsync(LlmRequest request, CancellationToken cancellationToken)
     {
         var gemini = options.Value;
@@ -22,6 +31,23 @@ internal sealed class GeminiClient(
                 "Gemini API key is not configured. Run: dotnet user-secrets set \"Gemini:ApiKey\" \"<your-key>\" --project src/LeagueManager.Api");
         }
 
+        var (result, retryAfter) = await SendOnceAsync(request, gemini, cancellationToken);
+
+        // The free tier allows only a few requests per minute, so a full round can hit the limit. Gemini says how long
+        // to wait; a short wait is worth it, a long one (daily quota used up) is not.
+        if (retryAfter is { } delay && delay <= TimeSpan.FromSeconds(gemini.MaxRateLimitWaitSeconds))
+        {
+            logger.LogInformation("Gemini rate limit reached, retrying in {Seconds:F0} s", delay.TotalSeconds);
+            await Task.Delay(delay, cancellationToken);
+            (result, _) = await SendOnceAsync(request, gemini, cancellationToken);
+        }
+
+        return result;
+    }
+
+    private async Task<(Result<string> Result, TimeSpan? RetryAfter)> SendOnceAsync(
+        LlmRequest request, GeminiOptions gemini, CancellationToken cancellationToken)
+    {
         using var message = new HttpRequestMessage(HttpMethod.Post, $"models/{gemini.Model}:generateContent")
         {
             Content = JsonContent.Create(new
@@ -32,6 +58,7 @@ internal sealed class GeminiClient(
                 {
                     temperature = gemini.Temperature,
                     maxOutputTokens = gemini.MaxOutputTokens,
+                    thinkingConfig = string.IsNullOrWhiteSpace(gemini.ThinkingLevel) ? null : new { thinkingLevel = gemini.ThinkingLevel },
                     // A JSON schema forces a bare {"text": ...} reply, without chatter or markdown around it.
                     responseMimeType = "application/json",
                     responseSchema = new
@@ -41,7 +68,7 @@ internal sealed class GeminiClient(
                         required = new[] { "text" }
                     }
                 }
-            })
+            }, options: RequestJsonOptions)
         };
 
         // Sent as a header, not as ?key= in the URL, so the key never appears in HttpClient request logs.
@@ -64,10 +91,15 @@ internal sealed class GeminiClient(
             if (!response.IsSuccessStatusCode)
             {
                 // Google's error text (e.g. "model not found", "quota exceeded") is what makes a failure diagnosable.
-                var details = await response.Content.ReadAsStringAsync(cancellationToken);
-                usage.Error = Truncate($"HTTP {(int)response.StatusCode}: {ReadErrorMessage(details)}", 500);
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                var error = ReadError(body);
+                usage.Error = Truncate($"HTTP {(int)response.StatusCode}: {error?.Message ?? body}", 500);
                 logger.LogWarning("Gemini request failed: {Error}", usage.Error);
-                return Error.ExternalService($"Gemini returned HTTP {(int)response.StatusCode}. Please try again later.");
+
+                var retryAfter = response.StatusCode == HttpStatusCode.TooManyRequests
+                    ? response.Headers.RetryAfter?.Delta ?? ReadRetryDelay(error)
+                    : null;
+                return (Error.ExternalService($"Gemini returned HTTP {(int)response.StatusCode}. Please try again later."), retryAfter);
             }
 
             var reply = await response.Content.ReadFromJsonAsync<GenerateContentResponse>(cancellationToken);
@@ -82,23 +114,23 @@ internal sealed class GeminiClient(
             if (candidate?.FinishReason != "STOP" || json is null)
             {
                 usage.Error = $"Finish reason {candidate?.FinishReason ?? reply?.PromptFeedback?.BlockReason ?? "none"}";
-                return Error.ExternalService("Gemini did not return a complete answer.");
+                return (Error.ExternalService("Gemini did not return a complete answer."), null);
             }
 
             var text = JsonSerializer.Deserialize<TextReply>(json, JsonSerializerOptions.Web)?.Text;
             if (string.IsNullOrWhiteSpace(text))
             {
                 usage.Error = "Empty text";
-                return Error.ExternalService("Gemini returned an empty answer.");
+                return (Error.ExternalService("Gemini returned an empty answer."), null);
             }
 
             usage.Success = true;
-            return text;
+            return (text, null);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
             usage.Error = ex.GetType().Name;
-            return Error.ExternalService("Gemini could not be reached. Please try again later.");
+            return (Error.ExternalService("Gemini could not be reached. Please try again later."), null);
         }
         finally
         {
@@ -116,22 +148,35 @@ internal sealed class GeminiClient(
         }
     }
 
-    private static string ReadErrorMessage(string body)
+    private static ErrorDetails? ReadError(string body)
     {
         try
         {
-            return JsonSerializer.Deserialize<ErrorResponse>(body, JsonSerializerOptions.Web)?.Error?.Message ?? body;
+            return JsonSerializer.Deserialize<ErrorResponse>(body, JsonSerializerOptions.Web)?.Error;
         }
         catch (JsonException)
         {
-            return body;
+            return null;
         }
+    }
+
+    // A 429 body carries a google.rpc.RetryInfo detail such as { "retryDelay": "33s" }.
+    private static TimeSpan? ReadRetryDelay(ErrorDetails? error)
+    {
+        var delay = error?.Details?
+            .Where(d => d.ValueKind == JsonValueKind.Object && d.TryGetProperty("retryDelay", out _))
+            .Select(d => d.GetProperty("retryDelay").GetString())
+            .FirstOrDefault();
+
+        return delay is not null && double.TryParse(delay.TrimEnd('s'), NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds)
+            ? TimeSpan.FromSeconds(seconds)
+            : null;
     }
 
     private static string Truncate(string value, int maxLength) => value.Length <= maxLength ? value : value[..maxLength];
 
     private sealed record ErrorResponse(ErrorDetails? Error);
-    private sealed record ErrorDetails(string? Message);
+    private sealed record ErrorDetails(string? Message, List<JsonElement>? Details);
 
     private sealed record GenerateContentResponse(List<Candidate>? Candidates, UsageMetadata? UsageMetadata, PromptFeedback? PromptFeedback);
     private sealed record Candidate(Content? Content, string? FinishReason);

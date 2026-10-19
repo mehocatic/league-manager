@@ -7,7 +7,8 @@ namespace LeagueManager.Application.Standings;
 
 public sealed record TopScorerDto(int Rank, int PlayerId, string Player, int TeamId, string Team, int Goals);
 
-public sealed record GetTopScorersQuery(int Limit) : IQuery<Result<IReadOnlyList<TopScorerDto>>>;
+// UpToRound works like in GetStandingsQuery: historical lists are calculated, only the current one is cached.
+public sealed record GetTopScorersQuery(int Limit, int? UpToRound = null) : IQuery<Result<IReadOnlyList<TopScorerDto>>>;
 
 internal sealed class GetTopScorersQueryHandler(ILeagueDbContext db, IMemoryCache cache)
     : IQueryHandler<GetTopScorersQuery, Result<IReadOnlyList<TopScorerDto>>>
@@ -21,21 +22,27 @@ internal sealed class GetTopScorersQueryHandler(ILeagueDbContext db, IMemoryCach
             return Error.Validation($"Limit must be between 1 and {MaxLimit}.");
         }
 
+        if (query.UpToRound is not null)
+        {
+            return (await LoadRankedScorersAsync(query.UpToRound, cancellationToken)).Take(query.Limit).ToList();
+        }
+
         // The full ranked list is cached under one key and trimmed per request; caching per limit would need
         // one key per value and make invalidation guess which keys exist.
         var all = await cache.GetOrCreateAsync(StandingsCache.TopScorersKey, entry =>
         {
             entry.SetOptions(StandingsCache.EntryOptions);
-            return LoadRankedScorersAsync(cancellationToken);
+            return LoadRankedScorersAsync(null, cancellationToken);
         });
 
         return all!.Take(query.Limit).ToList();
     }
 
-    private async Task<IReadOnlyList<TopScorerDto>> LoadRankedScorersAsync(CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<TopScorerDto>> LoadRankedScorersAsync(int? upToRound, CancellationToken cancellationToken)
     {
         // GROUP BY runs in SQL, so only one row per scorer comes back instead of every goal.
         var scorers = await db.Goals
+            .Where(g => upToRound == null || g.Match.Round <= upToRound)
             .GroupBy(g => new { g.PlayerId, g.Player.FirstName, g.Player.LastName, g.Player.TeamId, Team = g.Player.Team.Name })
             .Select(group => new { group.Key, Goals = group.Count() })
             .OrderByDescending(s => s.Goals).ThenBy(s => s.Key.LastName).ThenBy(s => s.Key.FirstName)
