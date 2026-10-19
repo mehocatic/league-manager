@@ -5,6 +5,17 @@ A backend for lower football leagues, built for a real use case: **2. liga FBiH 
 **The problem:** after every round, the people who publish results on fan pages update the table and the top scorers by hand and post them on Facebook, which takes 1 to 2 hours or more per round.
 **The 10x idea:** the admin only enters the results and scorers. The table, the top scorers, a written match summary (in Bosnian) and a weekly round PDF are produced automatically.
 
+## Screenshots
+
+![Swagger UI with the public and admin endpoints](docs/images/swagger.png)
+*Swagger UI: public read endpoints and admin endpoints (lock icon) protected by JWT.*
+
+![Round report, page 1: results and AI match reports](docs/images/round-report1.png)
+*Round PDF, page 1: results with dates, scorers and the AI-generated match reports in Bosnian.*
+
+![Round report, page 2: standings table and top scorers](docs/images/round-report2.png)
+*Round PDF, page 2: the standings table and top scorers after that round.*
+
 ## Features
 
 1. **Admin login** with JWT and an admin role. Everyone else has read-only access.
