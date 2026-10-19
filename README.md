@@ -159,6 +159,21 @@ The model only sees facts from the database, sent as JSON: teams, final score, a
 
 A rejected answer gets one retry; after that the summary is left empty rather than wrong. Every call, successful or not, is stored with tokens, duration and estimated cost.
 
+## AI evaluation (v1 -> v2)
+
+Live runs against Gemini on the seeded matches 1 (2:1), 34 (0:0) and 4 (2:5, seven goals), then on full rounds:
+
+| Version | Result | What we learned |
+|---|---|---|
+| v1: English, exact name check (`gemini-3.5-flash-lite`) | 3 of 3 accepted on the first try | Facts correct, but filler not in the data passed ("after a hard-fought ninety minutes"). Exact names would fail in Bosnian: match 4 names a scorer only as "Vedada Imamovića". |
+| Bosnian v1: case-tolerant names | 3 of 3 accepted on the first try | One factual error passed: in the 2:5 match, the 70' goal was called the one that set the final score (the last goal came in the 88th minute). |
+| v2: running score per goal + minute-order check | 4 of 4 correct on the first try (match 4 twice) | Goal order and in-between scores right, 0 rejections. |
+| Full round 9, first run | 0 of 7 | A correct answer was rejected twice (minutes in words, "u četvrtoj minuti") and the run stopped. Fixed: minutes must be digits, and a rejection skips only that match. |
+| Full round 9, after the fix | 7 of 7, 9 calls | 2 retries: "NK Bajr 99" (real typo, correctly rejected) and "NK Romarija" (valid genitive, falsely rejected, so `-ija/-iju/-ijem` endings were added). |
+| Full round 1, `gemini-3.8-flash`, thinking `low` | 7 of 7 in 26 s, 8 calls | One free-tier 429; the client waited the requested 4 s and retried. |
+
+All 53 tests pass, and Gemini's real wrong output (the 70' "final" goal) is kept as a regression test in [MatchSummaryValidatorTests.cs](tests/LeagueManager.Tests/MatchSummaryValidatorTests.cs).
+
 ## Known limitations
 
 - The validator checks facts, not grammar or wording. An occasional language slip can still pass.
