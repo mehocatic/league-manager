@@ -34,9 +34,14 @@ internal sealed class GeminiClient(
         var (result, retryAfter) = await SendOnceAsync(request, gemini, cancellationToken);
 
         // The free tier allows only a few requests per minute, so a full round can hit the limit. Gemini says how long
-        // to wait; a short wait is worth it, a long one (daily quota used up) is not.
-        if (retryAfter is { } delay && delay <= TimeSpan.FromSeconds(gemini.MaxRateLimitWaitSeconds))
+        // to wait; a short wait is worth it, a long one (or a used-up daily quota) is reported instead of waited out.
+        if (retryAfter is { } delay)
         {
+            if (delay > TimeSpan.FromSeconds(gemini.TimeoutSeconds))
+            {
+                return Error.ExternalService($"Gemini rate limit reached, try again in {Math.Ceiling(delay.TotalSeconds):F0} s.");
+            }
+
             logger.LogInformation("Gemini rate limit reached, retrying in {Seconds:F0} s", delay.TotalSeconds);
             await Task.Delay(delay, cancellationToken);
             (result, _) = await SendOnceAsync(request, gemini, cancellationToken);
@@ -93,13 +98,19 @@ internal sealed class GeminiClient(
                 // Google's error text (e.g. "model not found", "quota exceeded") is what makes a failure diagnosable.
                 var body = await response.Content.ReadAsStringAsync(cancellationToken);
                 var error = ReadError(body);
+
+                if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    var retryAfter = response.Headers.RetryAfter?.Delta ?? ReadRetryDelay(error);
+                    var retryText = retryAfter is { } wait ? $", retry in {Math.Ceiling(wait.TotalSeconds):F0} s" : "";
+                    usage.Error = Truncate($"Rate limit (HTTP 429){retryText}: {error?.Message ?? body}", 500);
+                    logger.LogWarning("Gemini rate limit reached: {Error}", usage.Error);
+                    return (Error.ExternalService("Gemini rate limit reached. Please try again later."), retryAfter);
+                }
+
                 usage.Error = Truncate($"HTTP {(int)response.StatusCode}: {error?.Message ?? body}", 500);
                 logger.LogWarning("Gemini request failed: {Error}", usage.Error);
-
-                var retryAfter = response.StatusCode == HttpStatusCode.TooManyRequests
-                    ? response.Headers.RetryAfter?.Delta ?? ReadRetryDelay(error)
-                    : null;
-                return (Error.ExternalService($"Gemini returned HTTP {(int)response.StatusCode}. Please try again later."), retryAfter);
+                return (Error.ExternalService($"Gemini returned HTTP {(int)response.StatusCode}. Please try again later."), null);
             }
 
             var reply = await response.Content.ReadFromJsonAsync<GenerateContentResponse>(cancellationToken);
@@ -126,6 +137,13 @@ internal sealed class GeminiClient(
 
             usage.Success = true;
             return (text, null);
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // HttpClient reports its own timeout as a cancellation; the caller did not cancel, so it is a timeout.
+            usage.Error = $"Timeout: no answer within {gemini.TimeoutSeconds} s";
+            logger.LogWarning("Gemini did not answer within {Seconds} s", gemini.TimeoutSeconds);
+            return (Error.ExternalService($"Gemini did not answer within {gemini.TimeoutSeconds} s. Please try again later."), null);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {

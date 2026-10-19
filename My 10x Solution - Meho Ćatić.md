@@ -66,7 +66,7 @@ Requires the .NET 11 SDK (RC 2). Swagger UI opens at <http://localhost:5250/swag
 dotnet user-secrets set "Gemini:ApiKey" "<your-key>" --project src/LeagueManager.Api
 ```
 
-The README contains a 5-minute demo path, the configuration options and a table that maps each concept to the files where it lives. `dotnet test` runs 53 tests without network access.
+The README contains a 5-minute demo path, the configuration options and a table that maps each concept to the files where it lives. `dotnet test` runs 54 tests without network access.
 
 ## What I learned
 

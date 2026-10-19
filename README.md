@@ -65,7 +65,7 @@ dotnet user-secrets set "Gemini:ApiKey" "<your-key>" --project src/LeagueManager
 dotnet test
 ```
 
-53 tests, no network or API key needed (Gemini is replaced by fakes). The key one compares the calculated table with the **official table after round 9**, row by row.
+54 tests, no network or API key needed (Gemini is replaced by fakes). The key one compares the calculated table with the **official table after round 9**, row by row.
 
 ## Configuration and secrets
 
@@ -76,7 +76,7 @@ No secret is committed to Git. Secrets come from `dotnet user-secrets` (developm
 | `Admin:Password` | user-secrets or `Admin__Password` | Only used to create the first admin when the `Users` table is empty. In Development, if it is missing, a random password is generated and printed once. Changing it later does not change the stored password. |
 | `Gemini:ApiKey` | user-secrets or `Gemini__ApiKey` | Optional, see above. |
 | `Jwt:SigningKey` | user-secrets or `Jwt__SigningKey` | At least 32 bytes. In Development a random key is generated per start (tokens stop working after a restart). Outside Development the app refuses to start without it. |
-| `Gemini:Model`, `Gemini:ThinkingLevel`, prices | `appsettings.json` | `gemini-3.8-flash` with thinking level `low`. |
+| `Gemini:Model`, `Gemini:ThinkingLevel`, prices | `appsettings.json` | `gemini-3.5-flash-lite` with thinking level `minimal` (see [model choice](#model-choice)). |
 | `Reports:*` | `appsettings.json` | League name, schedule (Monday 08:00, `Europe/Sarajevo`), on/off switch. |
 
 ## Seed and demo data
@@ -159,6 +159,19 @@ The model only sees facts from the database, sent as JSON: teams, final score, a
 
 A rejected answer gets one retry; after that the summary is left empty rather than wrong. Every call, successful or not, is stored with tokens, duration and estimated cost.
 
+If Gemini answers 429 (rate limit), the client waits the time Gemini asks for and retries once, but only if that wait fits within the 30 s request timeout. Otherwise the API answers 503 with "Gemini rate limit reached, try again in X s" instead of hanging. A Gemini call with no answer within 30 s is logged and reported as a timeout.
+
+### Model choice
+
+The summaries use `gemini-3.5-flash-lite` with thinking level `minimal`. Google does not publish per-model free-tier limits; they are shown in Google AI Studio. On 2026-10-19 it showed:
+
+| Model | Free tier per minute | Free tier per day |
+|---|---|---|
+| `gemini-3.5-flash-lite` | 15 requests | 500 requests |
+| `gemini-3.8-flash` | 5 requests | 20 requests |
+
+`gemini-3.8-flash` wrote slightly better Bosnian, but 20 requests per day is less than three full rounds (7 summaries plus retries each), so it cannot run a real league on the free tier. The model is one setting in `appsettings.json`.
+
 ## AI evaluation (v1 -> v2)
 
 Live runs against Gemini on the seeded matches 1 (2:1), 34 (0:0) and 4 (2:5, seven goals), then on full rounds:
@@ -171,14 +184,15 @@ Live runs against Gemini on the seeded matches 1 (2:1), 34 (0:0) and 4 (2:5, sev
 | Full round 9, first run | 0 of 7 | A correct answer was rejected twice (minutes in words, "u četvrtoj minuti") and the run stopped. Fixed: minutes must be digits, and a rejection skips only that match. |
 | Full round 9, after the fix | 7 of 7, 9 calls | 2 retries: "NK Bajr 99" (real typo, correctly rejected) and "NK Romarija" (valid genitive, falsely rejected, so `-ija/-iju/-ijem` endings were added). |
 | Full round 1, `gemini-3.8-flash`, thinking `low` | 7 of 7 in 26 s, 8 calls | One free-tier 429; the client waited the requested 4 s and retried. |
+| Back to `gemini-3.5-flash-lite`, thinking `minimal`, match 64 | correct on the first try in 1.2 s | After 19 of the 20 daily 3.8 Flash requests were used, two calls ended in 30 s timeouts. |
 
-All 53 tests pass, and Gemini's real wrong output (the 70' "final" goal) is kept as a regression test in [MatchSummaryValidatorTests.cs](tests/LeagueManager.Tests/MatchSummaryValidatorTests.cs).
+All 54 tests pass, and Gemini's real wrong output (the 70' "final" goal) is kept as a regression test in [MatchSummaryValidatorTests.cs](tests/LeagueManager.Tests/MatchSummaryValidatorTests.cs).
 
 ## Known limitations
 
 - The validator checks facts, not grammar or wording. An occasional language slip can still pass.
 - Own goals are not supported: every scorer must play for the team credited with the goal.
-- On the Gemini free tier `gemini-3.8-flash` allows 5 requests per minute. A full round (7 summaries) therefore waits once or twice and takes around 30 to 60 seconds.
+- Free-tier limits (15 requests per minute, 500 per day for `gemini-3.5-flash-lite`) are set by Google per project and can change. When they are reached, summaries are skipped and the PDF is produced without them.
 - If the app is not running on Monday at 08:00, that run is not caught up automatically; the admin can call `POST /api/reports`.
 - Single instance by design: SQLite and an in-memory cache. A second API instance would need a shared database and a distributed cache.
 - A front end (Angular: public table and fixtures, admin panel) is planned but not part of this repository yet.
